@@ -1,0 +1,124 @@
+<?php
+
+function school_news_menu() {
+  $items['performances'] = array(
+    'page callback' => 'school_news_performances',
+    'access arguments' => TRUE,
+  );
+  return $items;
+}
+
+function school_news_block_info() {
+  // This example comes from node.module.
+  $blocks['front_news'] = array( //front_news = blocki masinanimi
+    'info' => t('Esilehe uudised'),
+    'cache' => DRUPAL_NO_CACHE
+  );
+
+  return $blocks;
+}
+
+function school_news_block_view($delta = '') {
+  // This example is adapted from node.module.
+  $block = array();
+
+  switch ($delta) {
+    case 'front_news': //front_news = blocki masinanimi tuleb block info seest.
+      $block['subject'] = '';
+      $block['content'] = array(
+        '#type' => 'markup',
+        '#markup' => school_news_news_html(),
+      );
+      break;
+  }
+  return $block;
+}
+
+function school_news_news_html () {
+    
+    $result = db_select ('node', 'n')
+    ->fields('n')
+    ->condition('status', 0, '>')
+    ->condition('n.type', 'article', '=')
+    ->orderBy('n.created')
+    ->range(0,3)
+    ->execute()
+    ->fetchAll();
+    // krumo($result);
+    $output = '';
+    if(!empty($result)) {
+        $output = '<h3>'.t('News').'</h3>';
+        foreach ($result as $node) {
+            
+            // krumo($node);
+            $node = node_load($node->nid);
+            // krumo($node);
+            $body = $node->body['und'][0]['value'];
+            $body_length = strlen($body);
+            $output.='<div class="panel panel-default">
+  <div class="panel-heading">'.$node->title.'</div>
+  <div class="panel-body">
+  '.substr($body,0,200);
+  $output.='<div id="'.$node->nid.'" class="collapse">
+'.substr($body,200,$body_length).'
+</div>';
+  $output.='<a data-toggle="collapse" data-target="#'.$node->nid.'"> Loe rohkem</a>';
+  $output.='
+  </div>
+</div>';
+        }
+    }
+//     $output.='<button data-toggle="collapse" data-target="#demo">Collapsible</button>
+// <div id="demo" class="collapse">
+// Lorem ipsum dolor text....
+// </div>';
+return $output;
+}
+
+function school_news_performances(){
+  $build = array();
+  $build['performances'] = array(
+    '#type' =>'markup',
+    '#markup' => school_news_performances_html(),
+    );
+  
+  return $build;
+}
+
+function school_news_performances_html() {
+    $result = db_select ('node', 'n')
+      ->fields('n')
+      ->condition('status', 0, '>')
+      ->condition('n.type', 'performances', '=')
+      ->orderBy('n.created')
+      ->range(0,6)
+      ->execute()
+      ->fetchAll();
+      // krumo($result);
+      $output = '';
+      $output .= '<div class="row">';
+      foreach ($result as  $performance) {
+        $output.= school_news_performance_html($performance);
+      }
+      $output .='</div>';
+  return ($output);
+}
+
+function school_news_performance_html($performance) {
+  $output = '';
+
+  $performance = node_load($performance -> nid);
+  $image_uri = $performance->field_tunnuspilt['und'][0]['filename'];
+  $image_url = image_style_url('large', $image_uri);
+  $body = $performance->body['und'][0]['value'];
+  $url = url('node/'.$performance->nid);
+  $output.= '<div class="col-xs-6 col-md-3" style="max-height:250px; margin-bottom:16px;">
+    <a href="'.$url.'" class="thumbnail">
+      <img src="'.$image_url.'" style="max-height:100px;" alt="...">
+      <h3>'.$performance->title.'</h3>
+        <p style="color:black;">'.substr($body,0,100).'</p>
+    </a>
+  </div>';
+  // krumo($performance);
+  return $output;
+}
